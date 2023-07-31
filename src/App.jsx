@@ -50,14 +50,24 @@ export default function App() {
     const [watched, setWatched] = useState(tempWatchedData);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const movieName = 'Kadsjkfha';
+    const [query, setQuery] = useState('Inception');
+    const [selectedId, setSelectedId] = useState(null);
+
+    function handleSelectMovie(id) {
+        setSelectedId((selectedId) => (id === selectedId ? null : id));
+    }
+
+    function hanldeCloseMovie() {
+        setSelectedId(null);
+    }
 
     useEffect(() => {
         async function fetchMovies() {
             try {
+                setError('');
                 setIsLoading(true);
                 const res = await fetch(
-                    `https://www.omdbapi.com/?apikey=50ec3be2&s=${movieName}`
+                    `https://www.omdbapi.com/?apikey=50ec3be2&s=${query}`
                 );
 
                 if (!res.ok)
@@ -75,29 +85,57 @@ export default function App() {
                 setIsLoading(false);
             }
         }
+        if (query.length < 3) {
+            setMovies([]);
+            setError('');
+            return;
+        }
         fetchMovies();
-    }, []);
+    }, [query]);
+
     return (
         <>
             <NavBar>
-                <Search />
+                <Search query={query} setQuery={setQuery} />
                 <NumResult movies={movies} />
             </NavBar>
             <Main>
                 <Box>
-                    {/* {isLoading ? <Loader /> : <MovieList movies={movies} />} */}
-
                     {isLoading && <Loader />}
-                    {!isLoading && !error && <MovieList movies={movies} />}
+                    {!isLoading && !error && (
+                        <MovieList
+                            movies={movies}
+                            onSelectMovie={handleSelectMovie}
+                        />
+                    )}
                     {error && <ErrorMessage message={error} />}
                 </Box>
 
                 <Box>
-                    <WatchedSummary watched={watched} />
-                    <WatchedMoviesList watched={watched} />
+                    {selectedId ? (
+                        <MovieDetails
+                            selectedId={selectedId}
+                            onCloseMovie={hanldeCloseMovie}
+                        />
+                    ) : (
+                        <>
+                            <WatchedSummary watched={watched} />
+                            <WatchedMoviesList watched={watched} />{' '}
+                        </>
+                    )}
                 </Box>
             </Main>
         </>
+    );
+}
+
+function MovieDetails({ selectedId, onCloseMovie }) {
+    return (
+        <div className='details'>
+            <button className='btn-back' onClick={onCloseMovie}>
+                &larr;
+            </button>
+        </div>
     );
 }
 function Loader() {
@@ -129,8 +167,7 @@ function NumResult({ movies }) {
     );
 }
 
-function Search() {
-    const [query, setQuery] = useState('');
+function Search({ query, setQuery }) {
     return (
         <input
             className='search'
@@ -170,19 +207,23 @@ function Box({ children }) {
     );
 }
 
-function MovieList({ movies }) {
+function MovieList({ movies, onSelectMovie, onCloseMovie }) {
     return (
-        <ul className='list'>
+        <ul className='list list-movies'>
             {movies?.map((movie) => (
-                <Movie movie={movie} key={movie.imdbID} />
+                <Movie
+                    movie={movie}
+                    key={movie.imdbID}
+                    onSelectMovie={onSelectMovie}
+                />
             ))}
         </ul>
     );
 }
 
-function Movie({ movie }) {
+function Movie({ movie, onSelectMovie }) {
     return (
-        <li key={movie.imdbID}>
+        <li key={movie.imdbID} onClick={() => onSelectMovie(movie.imdbID)}>
             <img src={movie.Poster} alt={`${movie.Title} poster`} />
             <h3>{movie.Title}</h3>
             <div>
