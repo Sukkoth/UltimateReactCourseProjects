@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const tempMovieData = [
     {
@@ -48,6 +48,35 @@ const average = (arr) =>
 export default function App() {
     const [movies, setMovies] = useState(tempMovieData);
     const [watched, setWatched] = useState(tempWatchedData);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+    const movieName = 'Kadsjkfha';
+
+    useEffect(() => {
+        async function fetchMovies() {
+            try {
+                setIsLoading(true);
+                const res = await fetch(
+                    `https://www.omdbapi.com/?apikey=50ec3be2&s=${movieName}`
+                );
+
+                if (!res.ok)
+                    throw new Error(
+                        'Something went wrong with fetching movies'
+                    );
+
+                const data = await res.json();
+                if (data.Response === 'False')
+                    throw new Error('Movie Not Found');
+                setMovies(data.Search);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchMovies();
+    }, []);
     return (
         <>
             <NavBar>
@@ -56,7 +85,11 @@ export default function App() {
             </NavBar>
             <Main>
                 <Box>
-                    <MovieList movies={movies} />
+                    {/* {isLoading ? <Loader /> : <MovieList movies={movies} />} */}
+
+                    {isLoading && <Loader />}
+                    {!isLoading && !error && <MovieList movies={movies} />}
+                    {error && <ErrorMessage message={error} />}
                 </Box>
 
                 <Box>
@@ -67,6 +100,18 @@ export default function App() {
         </>
     );
 }
+function Loader() {
+    return <p className='loader'>Loading . . . </p>;
+}
+
+function ErrorMessage({ message }) {
+    return (
+        <p className='error'>
+            <span>📛</span> {message}
+        </p>
+    );
+}
+
 function Logo() {
     return (
         <div className='logo'>
