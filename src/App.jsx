@@ -47,11 +47,11 @@ const average = (arr) =>
     arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
 export default function App() {
-    const [movies, setMovies] = useState(tempMovieData);
-    const [watched, setWatched] = useState(tempWatchedData);
+    const [movies, setMovies] = useState([]);
+    const [watched, setWatched] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
-    const [query, setQuery] = useState('Inception');
+    const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState(null);
 
     function handleSelectMovie(id) {
@@ -71,12 +71,15 @@ export default function App() {
     }
 
     useEffect(() => {
+        const controller = new AbortController();
+
         async function fetchMovies() {
             try {
                 setError('');
                 setIsLoading(true);
                 const res = await fetch(
-                    `https://www.omdbapi.com/?apikey=50ec3be2&s=${query}`
+                    `https://www.omdbapi.com/?apikey=50ec3be2&s=${query}`,
+                    { signal: controller.signal }
                 );
 
                 if (!res.ok)
@@ -88,17 +91,23 @@ export default function App() {
                 if (data.Response === 'False')
                     throw new Error('Movie Not Found');
                 setMovies(data.Search);
+                setError('');
             } catch (err) {
-                setError(err.message);
+                if (err.name !== 'AbortError') setError(err.message);
             } finally {
                 setIsLoading(false);
             }
+            return () => {
+                controller.abort();
+            };
         }
         if (query.length < 3) {
             setMovies([]);
             setError('');
             return;
         }
+
+        hanldeCloseMovie();
         fetchMovies();
     }, [query]);
 
@@ -194,6 +203,27 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
 
         getMovieDetails();
     }, [selectedId]);
+
+    useEffect(() => {
+        function eventCallBack(e) {
+            if (e.code === 'Escape') {
+                onCloseMovie();
+            }
+        }
+        document.addEventListener('keydown', eventCallBack);
+
+        return () => {
+            document.removeEventListener('keydown', eventCallBack);
+        };
+    }, [onCloseMovie]);
+
+    useEffect(() => {
+        if (title) document.title = `Movie | ${title}`;
+
+        return () => {
+            document.title = 'usePopCorn';
+        };
+    }, [title]);
     return (
         <div className='details'>
             {isLoading ? (
@@ -253,6 +283,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
         </div>
     );
 }
+
 function Loader() {
     return <p className='loader'>Loading . . . </p>;
 }
