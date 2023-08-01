@@ -6,6 +6,7 @@ import RateConverter from '../RateConverter.jsx';
 
 ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
-        <RateConverter />
+        <App />
+        {/* <RateConverter /> */}
     </React.StrictMode>
 );

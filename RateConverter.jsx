@@ -3,7 +3,6 @@ const RateConverter = () => {
     const [convertFrom, setConvertFrom] = useState('EUR');
     const [convertTo, setConvertTo] = useState('USD');
     const [amount, setAmount] = useState(0);
-
     const [exchangeRate, setExchangeRate] = useState(0);
 
     useEffect(() => {
