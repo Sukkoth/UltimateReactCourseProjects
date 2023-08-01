@@ -1,25 +1,32 @@
-import { useEffect, useState } from 'react';
-
+import { useState, useEffect } from 'react';
 const RateConverter = () => {
-    const [amount, setAmount] = useState('');
-    const [from, setFrom] = useState('EUR');
-    const [to, setTo] = useState('USD');
-    const [output, setOutput] = useState('');
+    const [convertFrom, setConvertFrom] = useState('EUR');
+    const [convertTo, setConvertTo] = useState('USD');
+    const [amount, setAmount] = useState(0);
+
+    const [exchangeRate, setExchangeRate] = useState(0);
 
     useEffect(() => {
-        if (!Number(amount)) return;
+        if (!amount || convertFrom === convertTo) {
+            setExchangeRate(0);
+            return;
+        }
+
         const controller = new AbortController();
+
         async function getExchangeRate() {
+            setExchangeRate(0);
             try {
-                setAmount(null);
                 const res = await fetch(
                     `https://api.frankfurter.app/latest?amount=${Number(
                         amount
-                    )}&from${from}&to=${to}`,
+                    )}&from=${convertFrom}&to=${convertTo}`,
                     { signal: controller.signal }
                 );
                 const data = await res.json();
-                setOutput(data.rates[to]);
+                if (!res.ok) throw new Error('Error fetching rate');
+                console.log(data.rates[convertTo]);
+                setExchangeRate(data.rates[convertTo]);
             } catch (error) {
                 console.log(error.message);
             }
@@ -29,19 +36,20 @@ const RateConverter = () => {
         return () => {
             controller.abort();
         };
-    }, [from, to, amount]);
+    }, [convertFrom, convertTo, amount]);
+
     return (
         <div className='App'>
             <input
-                type='text'
-                placeholder='amount'
+                type='number'
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(Number(e.target.value, 10))}
             />
             <select
                 name='from'
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
+                id='from'
+                value={convertFrom}
+                onChange={(e) => setConvertFrom(e.target.value)}
             >
                 <option value='USD'>USD</option>
                 <option value='EUR'>EUR</option>
@@ -50,16 +58,18 @@ const RateConverter = () => {
             </select>
             <select
                 name='to'
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
+                id='to'
+                value={convertTo}
+                onChange={(e) => setConvertTo(e.target.value)}
             >
                 <option value='USD'>USD</option>
                 <option value='EUR'>EUR</option>
                 <option value='CAD'>CAD</option>
                 <option value='INR'>INR</option>
             </select>
+
             <div>
-                <h3>{amount && output}</h3>
+                <h3>{exchangeRate || ''}</h3>
             </div>
         </div>
     );
