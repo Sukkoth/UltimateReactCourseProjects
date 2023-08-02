@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import StarRating from './StarRating';
+import { useMovies } from './useMovies';
+import { useLocalStorageState } from './useLocalStorageState';
+import { useKey } from './useKey';
 
 const average = (arr) =>
     arr.reduce((acc, cur, i, arr) => acc + cur / arr.length, 0);
 
 export default function App() {
-    const [movies, setMovies] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
+    // const [movies, setMovies] = useState([]);
+    // const [isLoading, setIsLoading] = useState(false);
+    // const [error, setError] = useState('');
     const [query, setQuery] = useState('');
     const [selectedId, setSelectedId] = useState(null);
 
-    const [watched, setWatched] = useState(function () {
-        const storedValue = localStorage.getItem('watched');
-        return JSON.parse(storedValue);
-    });
+    const { movies, isLoading, error } = useMovies(query);
+
+    const [watched, setWatched] = useLocalStorageState([], 'watched');
 
     function handleSelectMovie(id) {
         setSelectedId((selectedId) => (id === selectedId ? null : id));
@@ -33,50 +35,6 @@ export default function App() {
         setWatched((watched) => watched.filter((movie) => movie.imdbID !== id));
     }
 
-    useEffect(() => {
-        const controller = new AbortController();
-
-        async function fetchMovies() {
-            try {
-                setError('');
-                setIsLoading(true);
-                const res = await fetch(
-                    `https://www.omdbapi.com/?apikey=50ec3be2&s=${query}`,
-                    { signal: controller.signal }
-                );
-
-                if (!res.ok)
-                    throw new Error(
-                        'Something went wrong with fetching movies'
-                    );
-
-                const data = await res.json();
-                if (data.Response === 'False')
-                    throw new Error('Movie Not Found');
-                setMovies(data.Search);
-                setError('');
-            } catch (err) {
-                if (err.name !== 'AbortError') setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-            return () => {
-                controller.abort();
-            };
-        }
-        if (query.length < 3) {
-            setMovies([]);
-            setError('');
-            return;
-        }
-
-        hanldeCloseMovie();
-        fetchMovies();
-    }, [query]);
-
-    useEffect(() => {
-        localStorage.setItem('watched', JSON.stringify(watched));
-    }, [watched]);
     return (
         <>
             <NavBar>
@@ -177,18 +135,7 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
         getMovieDetails();
     }, [selectedId]);
 
-    useEffect(() => {
-        function eventCallBack(e) {
-            if (e.code === 'Escape') {
-                onCloseMovie();
-            }
-        }
-        document.addEventListener('keydown', eventCallBack);
-
-        return () => {
-            document.removeEventListener('keydown', eventCallBack);
-        };
-    }, [onCloseMovie]);
+    useKey('Escape', onCloseMovie);
 
     useEffect(() => {
         if (title) document.title = `Movie | ${title}`;
@@ -288,22 +235,11 @@ function NumResult({ movies }) {
 
 function Search({ query, setQuery }) {
     const inputEl = useRef(null);
-
-    const callBackFunction = function (e) {
+    useKey('Enter', function () {
         if (document.activeElement === inputEl.current) return;
-        if (e.code === 'Enter') {
-            inputEl.current.focus();
-            setQuery('');
-        }
-    };
-    useEffect(() => {
-        document.addEventListener('keydown', callBackFunction);
         inputEl.current.focus();
-
-        return () => [
-            document.removeEventListener('keydown', callBackFunction),
-        ];
-    }, [setQuery]);
+        setQuery('');
+    });
 
     return (
         <input
@@ -396,7 +332,7 @@ function WatchedSummary({ watched }) {
                 </p>
                 <p>
                     <span>⏳</span>
-                    <span>{avgRuntime} min</span>
+                    <span>{avgRuntime.toFixed(2)} min</span>
                 </p>
             </div>
         </div>
